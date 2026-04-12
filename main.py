@@ -38,3 +38,31 @@ def criar_conta(conta: schemas.ContaCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Cliente não encontrado.")
     
     return crud.criar_conta(db=db, conta=conta)
+
+# Rota para Depósito
+@app.post("/contas/{conta_id}/deposito", response_model=schemas.ContaResponse)
+def realizar_deposito(conta_id: int, transacao: schemas.TransacaoCreate, db: Session = Depends(get_db)):
+    conta_atualizada = crud.depositar(db=db, conta_id=conta_id, transacao=transacao)
+    
+    if not conta_atualizada:
+        raise HTTPException(status_code=404, detail="Conta não encontrada.")
+    
+    return conta_atualizada
+
+# Rota para Saque
+@app.post("/contas/{conta_id}/saque", response_model=schemas.ContaResponse)
+def realizar_saque(conta_id: int, transacao: schemas.TransacaoCreate, db: Session = Depends(get_db)):
+    conta_atualizada = crud.sacar(db=db, conta_id=conta_id, transacao=transacao)
+    
+    if not conta_atualizada:
+        raise HTTPException(status_code=404, detail="Conta não encontrada.")
+    
+    # Traduz os bloqueios da regra de negócio para o usuário
+    if conta_atualizada == "SALDO_INSUFICIENTE":
+        raise HTTPException(status_code=400, detail="Operação falhou! Saldo insuficiente.")
+    if conta_atualizada == "LIMITE_VALOR_EXCEDIDO":
+        raise HTTPException(status_code=400, detail="Operação falhou! O valor excede o limite de R$ 500,00.")
+    if conta_atualizada == "LIMITE_SAQUES_EXCEDIDO":
+        raise HTTPException(status_code=400, detail="Operação falhou! Número máximo de 3 saques diários excedido.")
+    
+    return conta_atualizada
