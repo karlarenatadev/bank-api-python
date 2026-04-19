@@ -8,16 +8,16 @@ from src.schemas.transaction import TransactionIn
 
 
 class TransactionService:
-    async def read_all(self, account_id: int, limit: int, skip: int = 0) -> list[Record]:
-        query = transactions.select().where(transactions.c.account_id == account_id).limit(limit).offset(skip)
-        return await database.fetch_all(query)
-
     @database.transaction()
-    async def create(self, transaction: TransactionIn) -> Record:
+    async def create(self, transaction: TransactionIn, current_user_id: int) -> Record:
         query = accounts.select().where(accounts.c.id == transaction.account_id)
         account = await database.fetch_one(query)
+        
         if not account:
             raise AccountNotFoundError
+
+        if account.user_id != current_user_id:
+            raise BusinessError("Você não tem permissão para operar nesta conta.")
 
         if transaction.type == TransactionType.WITHDRAWAL:
             balance = float(account.balance) - transaction.amount
