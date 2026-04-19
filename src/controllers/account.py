@@ -13,7 +13,7 @@ tx_service = TransactionService()
 
 
 @router.get("/", response_model=list[AccountOut])
-async def read_accounts(limit: int, skip: int = 0):
+async def read_accounts(limit: int = 10, skip: int = 0, service: AccountService = Depends(AccountService)):
     return await account_service.read_all(limit=limit, skip=skip)
 
 

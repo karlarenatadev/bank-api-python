@@ -4,11 +4,13 @@ from src.exceptions import AccountNotFoundError, BusinessError
 from src.models.account import accounts
 from src.models.transaction import TransactionType, transactions
 from src.schemas.transaction import TransactionIn
+from datetime import datetime, time
 
 class TransactionService:
+        
     @database.transaction()
     async def create(self, transaction: TransactionIn, current_user_id: int):
-        # 1. Busca a conta e valida se pertence ao utilizador autenticado
+        # Busca a conta e valida se pertence ao utilizador autenticado
         query = accounts.select().where(accounts.c.id == transaction.account_id)
         account = await database.fetch_one(query)
         
@@ -17,16 +19,35 @@ class TransactionService:
         
         if account.user_id != current_user_id:
             raise BusinessError("Acesso negado: Esta conta não lhe pertence.")
+        
+        if transaction.type == TransactionType.WITHDRAWAL:
+            # Regra 1: Limite de R$ 500,00
+            if transaction.amount > 500:
+                raise BusinessError("O valor máximo por saque é de R$ 500,00.")
 
-        # 2. Validação de saldo para levantamentos
+            # Regra 2: Limite de 3 saques diários
+            today_start = datetime.combine(datetime.now().date(), time.min)
+            query_count = sa.select(sa.func.count()).select_from(transactions).where(
+                sa.and_(
+                    transactions.c.account_id == transaction.account_id,
+                    transactions.c.type == TransactionType.WITHDRAWAL,
+                    transactions.c.timestamp >= today_start
+                )
+            )
+            count = await database.fetch_val(query_count)
+            
+            if count >= 3:
+                raise BusinessError("Limite diário de 3 saques atingido.")
+
+        #  Validação de saldo para levantamentos
         if transaction.type == TransactionType.WITHDRAWAL:
             if float(account.balance) < transaction.amount:
                 raise BusinessError("Saldo insuficiente para realizar a operação.")
 
-        # 3. Registo da transação
+        #  Registo da transação
         transaction_id = await self.__register_transaction(transaction)
         
-        # 4. Atualização ATÓMICA do saldo no banco de dados
+        #  Atualização ATÓMICA do saldo no banco de dados
         await self.__update_balance_atomic(transaction)
 
         return await database.fetch_one(transactions.select().where(transactions.c.id == transaction_id))

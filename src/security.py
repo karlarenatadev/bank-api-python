@@ -23,10 +23,10 @@ class AccessToken(BaseModel):
 
 
 class JWTToken(BaseModel):
-    access_token: AccessToken
+    access_token: str
 
 
-def sign_jwt(user_id: int) -> JWTToken:
+def sign_jwt(user_id: int) -> dict:
     now = time.time()
     payload = {
         "iss": "desafio-bank.com.br",
