@@ -37,25 +37,37 @@ Diferente da versão inicial, esta API impõe restrições diretamente na camada
 ## 🚀 Como Executar
 
 1. Clone o repositório:
+
    ```bash
    git clone [https://github.com/karlarenatadev/bank-api-python.git](https://github.com/karlarenatadev/bank-api-python.git)
    ```
+
 2. Navegue até o diretório do projeto:
+
    ```bash
    cd bank-api-python
    ```
+
 3. Instale as dependências:
+
    ```bash
    pip install -r requirements.txt
    ```
+
 4. Inicie o servidor:
+
    ```bash
    uvicorn main:app --reload
    ```
+
 5. Acesse a documentação interativa da API (Swagger UI) em:
-   ```
+
+   ```bash
    http://127.0.0.1:8000/docs
    ```
+
+---
+
 ## 🔭 Próximos Passos
 
 - [ ] Integração com modelo de **Machine Learning** (Isolation Forest) para detecção automática de anomalias em transações.
@@ -63,4 +75,5 @@ Diferente da versão inicial, esta API impõe restrições diretamente na camada
 - [ ] Containerização da aplicação com **Docker**.
 
 ---
+
 **Desenvolvido por:** Karla Renata
