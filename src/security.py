@@ -11,28 +11,27 @@ from src.config import settings
 SECRET = settings.secret_key
 ALGORITHM = settings.algorithm
 
-
-class AccessToken(BaseModel):
+# 1. Modelo para os dados DENTRO do token (Payload)
+class AccessTokenPayload(BaseModel):
     iss: str
-    sub: int
+    sub: int  # Aqui fica o user_id
     aud: str
     exp: float
     iat: float
     nbf: float
     jti: str
 
-
-class JWTToken(BaseModel):
+# 2. Modelo para a RESPOSTA do login (JSON de saída)
+class JWTResponse(BaseModel):
     access_token: str
-
 
 def sign_jwt(user_id: int) -> dict:
     now = time.time()
     payload = {
         "iss": "desafio-bank.com.br",
-        "sub": user_id,
+        "sub": int(user_id), 
         "aud": "desafio-bank",
-        "exp": now + (60 * 30),  # 30 minutes
+        "exp": now + (60 * 30),  # 30 minutos
         "iat": now,
         "nbf": now,
         "jti": uuid4().hex,
@@ -40,21 +39,25 @@ def sign_jwt(user_id: int) -> dict:
     token = jwt.encode(payload, SECRET, algorithm=ALGORITHM)
     return {"access_token": token}
 
-
-async def decode_jwt(token: str) -> JWTToken | None:
+async def decode_jwt(token: str) -> AccessTokenPayload | None:
     try:
+        # Decodifica e valida a assinatura
         decoded_token = jwt.decode(token, SECRET, audience="desafio-bank", algorithms=[ALGORITHM])
-        _token = JWTToken.model_validate({"access_token": decoded_token})
-        return _token if _token.access_token.exp >= time.time() else None
+        # Transforma o dicionário decodificado no objeto de Payload
+        payload = AccessTokenPayload.model_validate(decoded_token)
+        
+        # Verifica expiração manualmente (opcional, o jwt.decode já faz isso)
+        if payload.exp >= time.time():
+            return payload
+        return None
     except Exception:
         return None
-
 
 class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
         super(JWTBearer, self).__init__(auto_error=auto_error)
 
-    async def __call__(self, request: Request) -> JWTToken:
+    async def __call__(self, request: Request) -> AccessTokenPayload:
         authorization = request.headers.get("Authorization", "")
         scheme, _, credentials = authorization.partition(" ")
 
@@ -62,30 +65,27 @@ class JWTBearer(HTTPBearer):
             if not scheme == "Bearer":
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid authentication scheme.",
+                    detail="Esquema de autenticação inválido.",
                 )
 
             payload = await decode_jwt(credentials)
             if not payload:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid or expired token.",
+                    detail="Token inválido ou expirado.",
                 )
-            return payload
+            return payload # Retorna o objeto validado
         else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authorization code.",
+                detail="Cabeçalho de autorização ausente.",
             )
 
-
 async def get_current_user(
-    token: Annotated[JWTToken, Depends(JWTBearer())],
+    payload: Annotated[AccessTokenPayload, Depends(JWTBearer())],
 ) -> dict[str, int]:
-    return {"user_id": token.access_token.sub}
-
+    # Agora acessamos .sub diretamente do objeto validado
+    return {"user_id": payload.sub}
 
 def login_required(current_user: Annotated[dict[str, int], Depends(get_current_user)]):
-    if not current_user:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return current_user

@@ -1,38 +1,38 @@
 # 🏦 Bank API - Sistema Bancário 2.0
 
-Este projeto representa a evolução técnica de um sistema bancário legado (baseado em terminal e listas em memória) para uma arquitetura moderna de **API RESTful**. Desenvolvido com **FastAPI** e **SQLAlchemy**, o sistema foca em persistência de dados real, validação rigorosa de esquemas e regras de negócio escaláveis.
+![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688.svg)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-ORM-red.svg)
 
-## 🧠 Contexto e Evolução
+Este projeto evoluiu de um sistema legado em memória para uma **API RESTful moderna**. O foco principal foi aplicar padrões de **Engenharia de Software** para garantir persistência, segurança e, acima de tudo, **precisão financeira**.
 
-O objetivo central desta nova versão foi aplicar padrões de **Engenharia de Dados** e **Desenvolvimento Backend** para garantir que a aplicação não apenas execute funções básicas (saque, depósito), mas que o faça de forma íntegra e auditável através de um banco de dados relacional (SQLite).
+## 🚀 Diferenciais Técnicos
 
-## 🛠️ Tecnologias Utilizadas
-
-* **Python 3.10+**
-* **FastAPI:** Framework moderno e de alto desempenho para construção de APIs.
-* **SQLAlchemy:** ORM (Object-Relational Mapper) para comunicação e persistência em SQL.
-* **Pydantic:** Validação de tipos e garantia da integridade dos dados (Schemas).
-* **SQLite:** Banco de dados local para desenvolvimento ágil.
-* **Uvicorn:** Servidor ASGI de produção.
-
-## 📂 Estrutura do Projeto
-
-A arquitetura foi dividida por responsabilidades para facilitar a manutenção e escalabilidade:
-
-* `database.py`: Configuração da conexão e motor (engine) do banco de dados.
-* `models.py`: Definição das tabelas e relacionamentos (Clientes ↔ Contas ↔ Transações).
-* `schemas.py`: Contratos de entrada e saída de dados (Pydantic).
-* `crud.py`: Lógica de negócio e operações diretas no banco de dados.
-* `main.py`: Porta de entrada da aplicação e definição dos endpoints.
+* **Precisão Financeira:** Utilização do tipo `Decimal` (via `Annotated` e `Field`) em vez de `float`, garantindo que não existam erros de arredondamento em transações monetárias.
+* **Segurança Baseada em JWT:** Implementação de autenticação assíncrona com **JSON Web Tokens**, garantindo acesso seguro e isolado aos dados de cada usuário.
+* **Arquitetura em Camadas:** Organização modular entre Controllers, Services e Models para facilitar a manutenção e escalabilidade do código.
 
 ## ⚙️ Regras de Negócio Implementadas
 
-Diferente da versão inicial, esta API impõe restrições diretamente na camada de serviço:
+A camada de serviço (`TransactionService`) impõe restrições rigorosas para auditoria e controle:
 
 1. **Limite de Saque:** O valor máximo permitido por operação de saque é de **R$ 500,00**.
 2. **Limite Diário:** Cada conta está restrita a, no máximo, **3 saques por dia**.
-3. **Verificação de Saldo:** Operações de saque só são confirmadas se o saldo atual for suficiente.
-4. **Integridade Transacional:** Toda movimentação (depósito ou saque) gera um registro automático na tabela de transações para auditoria futura.
+3. **Validação de Saldo:** Saques são processados apenas se houver saldo suficiente disponível.
+4. **Isolamento de Contas:** Um usuário autenticado só pode realizar transações ou visualizar extratos de contas que pertencem ao seu ID.
+
+## 📂 Estrutura do Projeto
+
+```text
+src/
+├── controllers/  # Endpoints da API e injeção de dependências
+├── services/     # Core da aplicação (Regras de negócio)
+├── models/       # Tabelas e relacionamentos do banco de dados
+├── schemas/      # Contratos de entrada/saída e validações Pydantic
+├── config.py     # Gestão de variáveis de ambiente (.env)
+├── database.py   # Configuração do motor de banco de dados
+└── security.py   # Lógica de criptografia, JWT e proteção de rotas
+```
 
 ## 🚀 Como Executar
 
@@ -70,9 +70,9 @@ Diferente da versão inicial, esta API impõe restrições diretamente na camada
 
 ## 🔭 Próximos Passos
 
-- [ ] Integração com modelo de **Machine Learning** (Isolation Forest) para detecção automática de anomalias em transações.
-- [ ] Implementação de autenticação JWT para acesso seguro às contas.
+- [ ] Implementação de **Testes Unitários com Pytest**.
 - [ ] Containerização da aplicação com **Docker**.
+- [ ] Integração com modelo de **Machine Learning** para detecção de anomalias.
 
 ---
 

@@ -5,6 +5,7 @@ from src.models.account import accounts
 from src.models.transaction import TransactionType, transactions
 from src.schemas.transaction import TransactionIn
 from datetime import datetime, time
+from decimal import Decimal
 
 class TransactionService:
         
@@ -21,6 +22,10 @@ class TransactionService:
             raise BusinessError("Acesso negado: Esta conta não lhe pertence.")
         
         if transaction.type == TransactionType.WITHDRAWAL:
+
+            if Decimal(str(account.balance)) < transaction.amount:
+                raise BusinessError("Saldo insuficiente para realizar a operação.")
+            
             # Regra 1: Limite de R$ 500,00
             if transaction.amount > 500:
                 raise BusinessError("O valor máximo por saque é de R$ 500,00.")
