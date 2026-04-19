@@ -1,15 +1,14 @@
-from fastapi import APIRouter, Depends, status
-
-from src.schemas.transaction import TransactionIn
+from fastapi import APIRouter, Depends
 from src.security import login_required
+from src.schemas.transaction import TransactionIn
 from src.services.transaction import TransactionService
-from src.views.transaction import TransactionOut
 
-router = APIRouter(prefix="/transactions", dependencies=[Depends(login_required)])
-
+router = APIRouter()
 service = TransactionService()
 
-
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=TransactionOut)
-async def create_transaction(transaction: TransactionIn):
-    return await service.create(transaction)
+@router.post("/transactions")
+async def create_transaction(
+    transaction: TransactionIn,
+    user_data: dict = Depends(login_required) # Injeta o user_id do JWT
+):
+    return await service.create(transaction, current_user_id=user_data["user_id"])

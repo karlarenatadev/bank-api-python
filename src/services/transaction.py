@@ -1,41 +1,48 @@
-from databases.interfaces import Record
-
+import sqlalchemy as sa
 from src.database import database
 from src.exceptions import AccountNotFoundError, BusinessError
 from src.models.account import accounts
 from src.models.transaction import TransactionType, transactions
 from src.schemas.transaction import TransactionIn
 
-
 class TransactionService:
     @database.transaction()
-    async def create(self, transaction: TransactionIn, current_user_id: int) -> Record:
+    async def create(self, transaction: TransactionIn, current_user_id: int):
+        # 1. Busca a conta e valida se pertence ao utilizador autenticado
         query = accounts.select().where(accounts.c.id == transaction.account_id)
         account = await database.fetch_one(query)
         
         if not account:
             raise AccountNotFoundError
-
+        
         if account.user_id != current_user_id:
-            raise BusinessError("Você não tem permissão para operar nesta conta.")
+            raise BusinessError("Acesso negado: Esta conta não lhe pertence.")
 
+        # 2. Validação de saldo para levantamentos
         if transaction.type == TransactionType.WITHDRAWAL:
-            balance = float(account.balance) - transaction.amount
-            if balance < 0:
-                raise BusinessError("Operation not carried out due to lack of balance")
-        else:
-            balance = float(account.balance) + transaction.amount
+            if float(account.balance) < transaction.amount:
+                raise BusinessError("Saldo insuficiente para realizar a operação.")
 
-        # Create transaction entry
+        # 3. Registo da transação
         transaction_id = await self.__register_transaction(transaction)
-        # Update account balance
-        await self.__update_account_balance(transaction.account_id, balance)
+        
+        # 4. Atualização ATÓMICA do saldo no banco de dados
+        await self.__update_balance_atomic(transaction)
 
-        query = transactions.select().where(transactions.c.id == transaction_id)
-        return await database.fetch_one(query)
+        return await database.fetch_one(transactions.select().where(transactions.c.id == transaction_id))
 
-    async def __update_account_balance(self, account_id: int, balance: float) -> None:
-        command = accounts.update().where(accounts.c.id == account_id).values(balance=balance)
+    async def __update_balance_atomic(self, transaction: TransactionIn):
+        # O cálculo é feito no SQL: balance = balance + amount (ou - amount)
+        if transaction.type == TransactionType.WITHDRAWAL:
+            new_balance_expression = accounts.c.balance - transaction.amount
+        else:
+            new_balance_expression = accounts.c.balance + transaction.amount
+
+        command = (
+            accounts.update()
+            .where(accounts.c.id == transaction.account_id)
+            .values(balance=new_balance_expression)
+        )
         await database.execute(command)
 
     async def __register_transaction(self, transaction: TransactionIn) -> int:

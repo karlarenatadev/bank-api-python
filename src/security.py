@@ -6,9 +6,10 @@ import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel
+from src.config import settings
 
-SECRET = "my-secret"
-ALGORITHM = "HS256"
+SECRET = settings.secret_key
+ALGORITHM = settings.algorithm
 
 
 class AccessToken(BaseModel):
