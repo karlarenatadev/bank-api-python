@@ -1,4 +1,5 @@
 [tool.poetry]
+package-mode = false
 name = "bank-api-python"
 version = "0.1.0"
 description = "Sistema bancário assíncrono com FastAPI"
